@@ -7,6 +7,7 @@ import { getProjects } from '@/api/projects'
 import type { Assignment, AssignmentCreate } from '@/types/assignment'
 import type { Employee } from '@/types/employee'
 import type { Project } from '@/types/project'
+import { downloadCsv } from '@/utils/csv'
 
 const RANKS = ['アナリスト', 'コンサルタント', 'シニアコンサルタント', 'マネージャー', 'シニアマネージャー', 'ディレクター', 'パートナー']
 const STATUSES = ['契約期間中', '内諾', '完了']
@@ -144,6 +145,23 @@ function statusBadgeClass(status: string): string {
   return 'badge badge-done'
 }
 
+function exportCsv() {
+  const headers = ['社員名', '案件名', 'ランク', '稼働率', '開始日', '終了日', 'ステータス', '単価', 'メモ']
+  const rows = filteredAssignments.value.map(a => [
+    a.employee_name,
+    a.project_name,
+    a.rank ?? '',
+    `${Math.round(a.utilization * 100)}%`,
+    a.start_date,
+    a.end_date,
+    a.status,
+    a.unit_price !== null ? String(a.unit_price) : '',
+    a.note ?? '',
+  ])
+  const suffix = statusFilter.value ? `_${statusFilter.value}` : ''
+  downloadCsv(headers, rows, `アサイン一覧${suffix}.csv`)
+}
+
 onMounted(load)
 </script>
 
@@ -182,6 +200,11 @@ onMounted(load)
         :class="{ active: statusFilter === s }"
         @click="statusFilter = s"
       >{{ s }}</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-secondary btn-sm" @click="exportCsv">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        CSV出力
+      </button>
     </div>
 
     <div class="card" style="overflow:hidden;margin-bottom:20px">

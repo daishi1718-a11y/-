@@ -53,6 +53,25 @@ const recentAssignments = computed(() =>
     .slice(0, 6)
 )
 
+const expiringSoon = computed(() => {
+  const today = new Date()
+  const in30 = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
+  const todayStr = today.toISOString().slice(0, 10)
+  const in30Str = in30.toISOString().slice(0, 10)
+  return assignments.value
+    .filter(a => a.status !== '完了' && a.end_date >= todayStr && a.end_date <= in30Str)
+    .sort((a, b) => a.end_date.localeCompare(b.end_date))
+})
+
+const availableEmployees = computed(() => {
+  if (!matrix.value) return []
+  const currentMonth = currentYearMonth()
+  return matrix.value.rows.filter(row => {
+    const cell = row.cells[currentMonth]
+    return !cell || cell.status === '空き'
+  })
+})
+
 function statusBadgeClass(status: string): string {
   if (status === '契約期間中') return 'badge badge-active'
   if (status === '内諾') return 'badge badge-pending'
@@ -209,6 +228,52 @@ onMounted(async () => {
           <span class="legend-item"><span class="lc lc-empty"></span>空き</span>
         </div>
       </div>
+
+      <!-- Expiring soon -->
+      <div class="card" style="overflow:hidden">
+        <div class="card-header">
+          <span class="card-title">
+            期限間近
+            <span v-if="expiringSoon.length > 0" class="expiry-badge">{{ expiringSoon.length }}</span>
+          </span>
+          <span style="font-size:11px;color:var(--text-3)">30日以内に終了</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>社員</th>
+              <th>案件</th>
+              <th>終了日</th>
+              <th>ステータス</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in expiringSoon" :key="a.id">
+              <td style="font-weight:500">{{ a.employee_name }}</td>
+              <td>{{ a.project_name }}</td>
+              <td class="nowrap expiry-date">{{ a.end_date }}</td>
+              <td><span :class="statusBadgeClass(a.status)">{{ a.status }}</span></td>
+            </tr>
+            <tr v-if="expiringSoon.length === 0">
+              <td colspan="4" class="empty-state">期限間近のアサインはありません</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Available employees -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">今月の空き社員</span>
+          <RouterLink to="/staffing" class="btn btn-ghost btn-sm">マトリクス</RouterLink>
+        </div>
+        <div v-if="availableEmployees.length > 0" class="avail-list">
+          <span v-for="row in availableEmployees" :key="row.employee_id" class="avail-chip">
+            {{ row.employee_name }}
+          </span>
+        </div>
+        <div v-else class="empty-state">全社員アサイン中</div>
+      </div>
     </div>
   </div>
 </template>
@@ -238,6 +303,37 @@ onMounted(async () => {
   grid-template-columns: 1.3fr 0.7fr;
   gap: 16px;
   align-items: start;
+}
+
+.expiry-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.expiry-date { color: #dc2626; font-weight: 600; }
+
+.avail-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 20px;
+}
+.avail-chip {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--primary-bg);
+  color: var(--primary-dark);
+  border: 1px solid #bfdbfe;
 }
 
 /* matrix cell colors */

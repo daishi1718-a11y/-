@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { extractError } from '@/api/client'
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { getEmployees, createEmployee, updateEmployee, deleteEmployee } from '@/api/employees'
 import type { Employee, EmployeeCreate } from '@/types/employee'
 
@@ -9,7 +9,14 @@ const STATUSES = ['在籍', '退職', '入社見込み']
 
 const employees = ref<Employee[]>([])
 const editingId = ref<number | null>(null)
+const statusFilter = ref('')
 const error = ref('')
+
+const filteredEmployees = computed(() =>
+  statusFilter.value === ''
+    ? employees.value
+    : employees.value.filter(e => e.status === statusFilter.value)
+)
 
 const form = reactive({
   employee_code: '',
@@ -102,7 +109,7 @@ onMounted(load)
       <div>
         <div class="page-title">
           社員管理
-          <span class="count-badge">{{ employees.length }}</span>
+          <span class="count-badge">{{ filteredEmployees.length }}</span>
         </div>
         <div class="page-desc">社員マスタの登録・編集</div>
       </div>
@@ -115,6 +122,12 @@ onMounted(load)
     <div v-if="error" class="error-banner">
       <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px;flex-shrink:0;margin-top:1px"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
       {{ error }}
+    </div>
+
+    <div class="filter-bar">
+      <span class="filter-label">在籍状況</span>
+      <button class="filter-btn" :class="{ active: statusFilter === '' }" @click="statusFilter = ''">すべて</button>
+      <button v-for="s in STATUSES" :key="s" class="filter-btn" :class="{ active: statusFilter === s }" @click="statusFilter = s">{{ s }}</button>
     </div>
 
     <div class="card" style="overflow:hidden;margin-bottom:20px">
@@ -131,7 +144,7 @@ onMounted(load)
         </thead>
         <tbody>
           <tr
-            v-for="emp in employees"
+            v-for="emp in filteredEmployees"
             :key="emp.id"
             class="row-clickable"
             :class="{ 'row-selected': editingId === emp.id }"
@@ -144,8 +157,8 @@ onMounted(load)
             <td class="nowrap">{{ emp.joined_at ?? '' }}</td>
             <td class="nowrap">{{ emp.left_at ?? '' }}</td>
           </tr>
-          <tr v-if="employees.length === 0">
-            <td colspan="6" class="empty-state">社員が登録されていません</td>
+          <tr v-if="filteredEmployees.length === 0">
+            <td colspan="6" class="empty-state">{{ statusFilter ? '該当する社員がいません' : '社員が登録されていません' }}</td>
           </tr>
         </tbody>
       </table>
@@ -202,4 +215,37 @@ onMounted(load)
 
 <style scoped>
 .nowrap { white-space: nowrap; }
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  margin-right: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.filter-btn {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  font-family: inherit;
+}
+.filter-btn:hover { background: var(--surface-sub); }
+.filter-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
 </style>

@@ -7,6 +7,7 @@ import { getClients } from '@/api/clients'
 import type { SearchResult } from '@/types/search'
 import type { Employee } from '@/types/employee'
 import type { Client } from '@/types/client'
+import { downloadCsv } from '@/utils/csv'
 
 const STATUSES = ['契約期間中', '内諾', '完了']
 
@@ -72,6 +73,24 @@ function commercialFlow(r: SearchResult): string {
   return [r.end_client_name, r.prime_client_name, r.mid1_client_name, r.mid2_client_name, r.contract_client_name]
     .filter(Boolean)
     .join(' → ')
+}
+
+function exportCsv() {
+  const headers = ['社員名', 'クラス', '案件名', 'エンド顧客', '役割', '開始日', '終了日', 'ステータス', '稼働率', '単価', 'メモ']
+  const rows = results.value.map(r => [
+    r.employee_name,
+    r.employee_position,
+    r.project_name,
+    r.end_client_name ?? '',
+    r.role ?? '',
+    r.start_date,
+    r.end_date,
+    r.assignment_status,
+    `${Math.round(r.utilization * 100)}%`,
+    r.unit_price !== null ? String(r.unit_price) : '',
+    r.note ?? '',
+  ])
+  downloadCsv(headers, rows, 'ナレッジ検索結果.csv')
 }
 
 function statusBadgeClass(status: string): string {
@@ -148,8 +167,14 @@ onMounted(load)
 
     <div v-if="searched">
       <div class="results-header">
-        検索結果
-        <span class="count-badge">{{ results.length }} 件</span>
+        <span>
+          検索結果
+          <span class="count-badge">{{ results.length }} 件</span>
+        </span>
+        <button v-if="results.length > 0" class="btn btn-secondary btn-sm" @click="exportCsv">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          CSV出力
+        </button>
       </div>
 
       <div v-if="results.length === 0" class="card">
@@ -267,6 +292,9 @@ onMounted(load)
 }
 
 .results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-2);
