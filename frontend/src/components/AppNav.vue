@@ -3,6 +3,8 @@
 <template>
   <nav class="nav">
     <span class="nav-title">案件・要員管理</span>
+    <RouterLink to="/search" class="highlight">🔍 ナレッジ検索</RouterLink>
+    <span class="sep">|</span>
     <RouterLink to="/staffing">稼働マトリクス</RouterLink>
     <RouterLink to="/employees">社員管理</RouterLink>
     <RouterLink to="/projects">案件管理</RouterLink>
@@ -32,5 +34,16 @@
 .nav a:hover,
 .nav a.router-link-active {
   color: #f8fafc;
+}
+.nav a.highlight {
+  color: #7dd3fc;
+}
+.nav a.highlight:hover,
+.nav a.highlight.router-link-active {
+  color: #fff;
+}
+.sep {
+  color: #334155;
+  font-size: 0.8rem;
 }
 </style>

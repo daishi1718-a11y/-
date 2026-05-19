@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine, Base
-from .routers import employees, clients, projects, assignments, staffing
+from .routers import employees, clients, projects, assignments, staffing, search
 
 Base.metadata.create_all(bind=engine)
 
@@ -21,3 +21,4 @@ app.include_router(clients.router)
 app.include_router(projects.router)
 app.include_router(assignments.router)
 app.include_router(staffing.router)
+app.include_router(search.router)
