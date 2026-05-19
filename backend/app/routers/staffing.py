@@ -9,39 +9,58 @@ from ..database import get_db
 router = APIRouter(prefix="/api/staffing", tags=["staffing"])
 
 
+def _build_months(start: str, end: str) -> list[str]:
+    months = []
+    y, m = int(start[:4]), int(start[5:7])
+    ey, em = int(end[:4]), int(end[5:7])
+    while (y, m) <= (ey, em):
+        months.append(f"{y:04d}-{m:02d}")
+        m += 1
+        if m > 12:
+            m, y = 1, y + 1
+    return months
+
+
 @router.get("/matrix", response_model=schemas.StaffingMatrix)
 def get_matrix(
     from_month: str = Query(..., alias="from", description="YYYY-MM"),
     to_month: str = Query(..., alias="to", description="YYYY-MM"),
     db: Session = Depends(get_db),
 ):
-    # 対象月リストを生成
-    def month_range(start: str, end: str) -> list[str]:
-        months = []
-        y, m = int(start[:4]), int(start[5:7])
-        ey, em = int(end[:4]), int(end[5:7])
-        while (y, m) <= (ey, em):
-            months.append(f"{y:04d}-{m:02d}")
-            m += 1
-            if m > 12:
-                m = 1
-                y += 1
-        return months
+    months = _build_months(from_month, to_month)
 
-    months = month_range(from_month, to_month)
-
-    employees = db.query(models.Employee).filter(models.Employee.status != "退職").all()
-    assignments = (
-        db.query(models.Assignment)
-        .options(joinedload(models.Assignment.project))
-        .filter(models.Assignment.status != "完了")
+    employees = (
+        db.query(models.Employee)
+        .filter(models.Employee.status != "退職")
+        .order_by(models.Employee.employee_code)
         .all()
     )
 
+    # 期間が重なるアサインを一括取得（完了済みを除く）
+    from_date = date(int(from_month[:4]), int(from_month[5:7]), 1)
+    to_y, to_m = int(to_month[:4]), int(to_month[5:7])
+    to_date = date(to_y, to_m, monthrange(to_y, to_m)[1])
+
+    assignments = (
+        db.query(models.Assignment)
+        .options(joinedload(models.Assignment.project))
+        .filter(
+            models.Assignment.status != "完了",
+            models.Assignment.start_date <= to_date,
+            models.Assignment.end_date >= from_date,
+        )
+        .all()
+    )
+
+    # employee_id → assignments のマップを事前構築（N+1回避）
+    assign_map: dict[int, list[models.Assignment]] = {}
+    for a in assignments:
+        assign_map.setdefault(a.employee_id, []).append(a)
+
     rows = []
     for emp in employees:
-        emp_assignments = [a for a in assignments if a.employee_id == emp.id]
-        month_cells: dict[str, schemas.StaffingCell] = {}
+        emp_assignments = assign_map.get(emp.id, [])
+        cells: dict[str, schemas.StaffingCell] = {}
 
         for ym in months:
             y, m = int(ym[:4]), int(ym[5:7])
@@ -55,17 +74,17 @@ def get_matrix(
 
             if matched:
                 a = matched[0]
-                month_cells[ym] = schemas.StaffingCell(
+                cells[ym] = schemas.StaffingCell(
                     status=a.status,
                     project_name=a.project.name,
                 )
             else:
-                month_cells[ym] = schemas.StaffingCell(status="空き")
+                cells[ym] = schemas.StaffingCell(status="空き")
 
         rows.append(schemas.StaffingRow(
             employee_id=emp.id,
             employee_name=emp.name,
-            months=month_cells,
+            cells=cells,
         ))
 
     return schemas.StaffingMatrix(months=months, rows=rows)

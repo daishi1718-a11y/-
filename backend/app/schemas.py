@@ -97,14 +97,14 @@ class AssignmentOut(AssignmentBase):
 
 # ── Staffing ──────────────────────────────────────────────────
 class StaffingCell(BaseModel):
-    status: str          # "契約期間中" | "内諾" | "空き"
+    status: str           # "契約期間中" | "内諾" | "空き"
     project_name: Optional[str] = None
 
 
 class StaffingRow(BaseModel):
     employee_id: int
     employee_name: str
-    months: dict[str, StaffingCell]  # key: "YYYY-MM"
+    cells: dict[str, StaffingCell]  # key: "YYYY-MM"
 
 
 class StaffingMatrix(BaseModel):
