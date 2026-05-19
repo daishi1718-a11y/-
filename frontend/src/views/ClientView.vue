@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { extractError } from '@/api/client'
 import { ref, reactive, onMounted } from 'vue'
 import { getClients, createClient, updateClient, deleteClient } from '@/api/clients'
 import type { Client, ClientCreate } from '@/types/client'
@@ -43,8 +44,8 @@ function selectRow(c: Client) {
 async function load() {
   try {
     clients.value = await getClients()
-  } catch {
-    error.value = '顧客一覧の取得に失敗しました'
+  } catch (e) {
+    error.value = extractError(e)
   }
 }
 
@@ -70,8 +71,8 @@ async function submit() {
     }
     await load()
     resetForm()
-  } catch {
-    error.value = '保存に失敗しました'
+  } catch (e) {
+    error.value = extractError(e)
   }
 }
 
@@ -82,8 +83,8 @@ async function remove() {
     await deleteClient(editingId.value)
     await load()
     resetForm()
-  } catch {
-    error.value = '削除に失敗しました'
+  } catch (e) {
+    error.value = extractError(e)
   }
 }
 

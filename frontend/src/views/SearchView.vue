@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { extractError } from '@/api/client'
 import { ref, reactive, onMounted } from 'vue'
 import { searchKnowledge } from '@/api/search'
 import { getEmployees } from '@/api/employees'
@@ -34,8 +35,8 @@ async function load() {
     const [emp, cli] = await Promise.all([getEmployees(), getClients()])
     employees.value = emp
     clients.value = cli
-  } catch {
-    error.value = 'マスタデータの取得に失敗しました'
+  } catch (e) {
+    error.value = extractError(e)
   }
 }
 
@@ -51,8 +52,8 @@ async function doSearch() {
     })
     searched.value = true
     expandedId.value = null
-  } catch {
-    error.value = '検索に失敗しました'
+  } catch (e) {
+    error.value = extractError(e)
   } finally {
     loading.value = false
   }

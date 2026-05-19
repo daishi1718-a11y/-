@@ -1,7 +1,6 @@
-import axios from 'axios'
+import { apiClient as api } from '@/api/client'
 import type { Project, ProjectCreate } from '@/types/project'
 
-const api = axios.create({ baseURL: 'http://localhost:8000' })
 
 export const getProjects = (): Promise<Project[]> =>
   api.get<Project[]>('/api/projects').then(r => r.data)

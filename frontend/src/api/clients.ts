@@ -1,7 +1,6 @@
-import axios from 'axios'
+import { apiClient as api } from '@/api/client'
 import type { Client, ClientCreate } from '@/types/client'
 
-const api = axios.create({ baseURL: 'http://localhost:8000' })
 
 export const getClients = (): Promise<Client[]> =>
   api.get<Client[]>('/api/clients').then(r => r.data)

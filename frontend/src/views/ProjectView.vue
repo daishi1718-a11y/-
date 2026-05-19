@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { extractError } from '@/api/client'
 import { ref, reactive, onMounted } from 'vue'
 import { getProjects, createProject, updateProject, deleteProject } from '@/api/projects'
 import { getClients } from '@/api/clients'
@@ -76,8 +77,8 @@ async function load() {
     const [prj, cli] = await Promise.all([getProjects(), getClients()])
     projects.value = prj
     clients.value = cli
-  } catch {
-    error.value = 'データの取得に失敗しました'
+  } catch (e) {
+    error.value = extractError(e)
   }
 }
 
@@ -109,8 +110,8 @@ async function submit() {
     }
     await load()
     resetForm()
-  } catch {
-    error.value = '保存に失敗しました'
+  } catch (e) {
+    error.value = extractError(e)
   }
 }
 
@@ -121,8 +122,8 @@ async function remove() {
     await deleteProject(editingId.value)
     await load()
     resetForm()
-  } catch {
-    error.value = '削除に失敗しました'
+  } catch (e) {
+    error.value = extractError(e)
   }
 }
 

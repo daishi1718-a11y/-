@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { extractError } from '@/api/client'
 import { ref, onMounted } from 'vue'
 import { getStaffingMatrix } from '@/api/staffing'
 import type { StaffingMatrix } from '@/types/staffing'
@@ -28,7 +29,7 @@ async function load() {
   try {
     matrix.value = await getStaffingMatrix(fromMonth.value, toMonth.value)
   } catch (e) {
-    error.value = 'データの取得に失敗しました'
+    error.value = extractError(e)
   } finally {
     loading.value = false
   }

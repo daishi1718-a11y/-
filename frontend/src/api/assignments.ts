@@ -1,7 +1,6 @@
-import axios from 'axios'
+import { apiClient as api } from '@/api/client'
 import type { Assignment, AssignmentCreate } from '@/types/assignment'
 
-const api = axios.create({ baseURL: 'http://localhost:8000' })
 
 export const getAssignments = (): Promise<Assignment[]> =>
   api.get<Assignment[]>('/api/assignments').then(r => r.data)

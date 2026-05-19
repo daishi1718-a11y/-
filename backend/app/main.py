@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 
 from .database import engine, Base
 from .routers import employees, clients, projects, assignments, staffing, search
@@ -7,6 +9,17 @@ from .routers import employees, clients, projects, assignments, staffing, search
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="案件・要員管理システム")
+
+
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSONResponse:
+    msg = str(exc.orig) if exc.orig else str(exc)
+    if "UNIQUE constraint failed" in msg:
+        field = msg.split(".")[-1] if "." in msg else "フィールド"
+        detail = f"同じコードがすでに登録されています（{field}）"
+    else:
+        detail = "データの整合性エラーが発生しました"
+    return JSONResponse(status_code=409, content={"detail": detail})
 
 app.add_middleware(
     CORSMiddleware,

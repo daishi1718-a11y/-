@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { extractError } from '@/api/client'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { getAssignments, createAssignment, updateAssignment, deleteAssignment } from '@/api/assignments'
 import { getEmployees } from '@/api/employees'
@@ -70,8 +71,8 @@ async function load() {
     assignments.value = asn
     employees.value = emp
     projects.value = prj
-  } catch {
-    error.value = 'データの取得に失敗しました'
+  } catch (e) {
+    error.value = extractError(e)
   }
 }
 
@@ -106,8 +107,8 @@ async function submit() {
     }
     await load()
     resetForm()
-  } catch {
-    error.value = '保存に失敗しました'
+  } catch (e) {
+    error.value = extractError(e)
   }
 }
 
@@ -118,8 +119,8 @@ async function remove() {
     await deleteAssignment(editingId.value)
     await load()
     resetForm()
-  } catch {
-    error.value = '削除に失敗しました'
+  } catch (e) {
+    error.value = extractError(e)
   }
 }
 

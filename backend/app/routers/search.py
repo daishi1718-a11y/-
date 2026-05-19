@@ -42,13 +42,6 @@ class SearchResult(BaseModel):
     contract_client_name: Optional[str]
 
 
-def _client_name(db: Session, client_id: Optional[int]) -> Optional[str]:
-    if client_id is None:
-        return None
-    c = db.query(models.Client).filter(models.Client.id == client_id).first()
-    return c.name if c else None
-
-
 @router.get("", response_model=list[SearchResult])
 def search(
     q: Optional[str] = Query(None, description="フリーワード（社員名・案件名・スキル・メモ）"),
@@ -95,13 +88,29 @@ def search(
             )
         )
 
-    assignments = query.order_by(
+    rows = query.order_by(
         models.Assignment.employee_id,
         models.Assignment.start_date.desc(),
     ).all()
 
+    # 商流FKを一括取得（N+1回避）
+    client_ids: set[int] = set()
+    for a in rows:
+        prj = a.project
+        for cid in [prj.end_client_id, prj.prime_client_id,
+                    prj.mid1_client_id, prj.mid2_client_id, prj.contract_client_id]:
+            if cid is not None:
+                client_ids.add(cid)
+    client_map: dict[int, str] = {}
+    if client_ids:
+        for c in db.query(models.Client).filter(models.Client.id.in_(client_ids)).all():
+            client_map[c.id] = c.name
+
+    def cn(cid: Optional[int]) -> Optional[str]:
+        return client_map.get(cid) if cid is not None else None
+
     results = []
-    for a in assignments:
+    for a in rows:
         emp: models.Employee = a.employee
         prj: models.Project = a.project
         results.append(SearchResult(
@@ -125,10 +134,10 @@ def search(
             preferred_skill=prj.preferred_skill,
             process_flags=prj.process_flags,
             description=prj.description,
-            end_client_name=_client_name(db, prj.end_client_id),
-            prime_client_name=_client_name(db, prj.prime_client_id),
-            mid1_client_name=_client_name(db, prj.mid1_client_id),
-            mid2_client_name=_client_name(db, prj.mid2_client_id),
-            contract_client_name=_client_name(db, prj.contract_client_id),
+            end_client_name=cn(prj.end_client_id),
+            prime_client_name=cn(prj.prime_client_id),
+            mid1_client_name=cn(prj.mid1_client_id),
+            mid2_client_name=cn(prj.mid2_client_id),
+            contract_client_name=cn(prj.contract_client_id),
         ))
     return results
