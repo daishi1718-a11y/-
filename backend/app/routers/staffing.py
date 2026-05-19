@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from datetime import date
 from calendar import monthrange
 
 from .. import models, schemas
 from ..database import get_db
+
+_STATUS_PRIORITY = {"契約期間中": 0, "内諾": 1}
 
 router = APIRouter(prefix="/api/staffing", tags=["staffing"])
 
@@ -27,6 +29,8 @@ def get_matrix(
     to_month: str = Query(..., alias="to", description="YYYY-MM"),
     db: Session = Depends(get_db),
 ):
+    if from_month > to_month:
+        raise HTTPException(status_code=422, detail="from は to 以前の月を指定してください")
     months = _build_months(from_month, to_month)
 
     employees = (
@@ -73,13 +77,22 @@ def get_matrix(
             ]
 
             if matched:
-                a = matched[0]
-                cells[ym] = schemas.StaffingCell(
-                    status=a.status,
-                    project_name=a.project.name,
-                )
+                if len(matched) == 1:
+                    a = matched[0]
+                    cells[ym] = schemas.StaffingCell(
+                        status=a.status,
+                        project_name=a.project.name,
+                        count=1,
+                    )
+                else:
+                    best = min(matched, key=lambda a: _STATUS_PRIORITY.get(a.status, 99))
+                    cells[ym] = schemas.StaffingCell(
+                        status=best.status,
+                        project_name=" / ".join(a.project.name for a in matched),
+                        count=len(matched),
+                    )
             else:
-                cells[ym] = schemas.StaffingCell(status="空き")
+                cells[ym] = schemas.StaffingCell(status="空き", count=0)
 
         rows.append(schemas.StaffingRow(
             employee_id=emp.id,

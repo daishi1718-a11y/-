@@ -86,6 +86,20 @@ async function submit() {
     error.value = '必須項目を入力してください'
     return
   }
+  const util = Number(form.utilization)
+  if (isNaN(util) || util <= 0 || util > 1.0) {
+    error.value = '稼働率は 0 より大きく 1.0 以下の値を入力してください'
+    return
+  }
+  if (form.start_date > form.end_date) {
+    error.value = '開始日は終了日以前の日付を入力してください'
+    return
+  }
+  const price = form.unit_price ? Number(form.unit_price) : null
+  if (price !== null && price < 0) {
+    error.value = '単価は 0 以上の値を入力してください'
+    return
+  }
   error.value = ''
   const body: AssignmentCreate = {
     employee_id: Number(form.employee_id),
@@ -166,7 +180,7 @@ onMounted(load)
           <td>{{ a.employee_name }}</td>
           <td>{{ a.project_name }}</td>
           <td>{{ a.rank ?? '' }}</td>
-          <td>{{ a.utilization }}</td>
+          <td>{{ Math.round(a.utilization * 100) }}%</td>
           <td>{{ a.start_date }}</td>
           <td>{{ a.end_date }}</td>
           <td><span :class="statusClass(a.status)">{{ a.status }}</span></td>

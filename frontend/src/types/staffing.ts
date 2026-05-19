@@ -1,6 +1,7 @@
 export interface StaffingCell {
   status: string        // "契約期間中" | "内諾" | "空き"
   project_name: string | null
+  count: number
 }
 
 export interface StaffingRow {

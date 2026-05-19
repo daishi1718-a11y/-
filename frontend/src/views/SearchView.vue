@@ -171,7 +171,7 @@ onMounted(load)
                       <dl>
                         <dt>在籍状況</dt><dd>{{ r.employee_status }}</dd>
                         <dt>アサイン時ランク</dt><dd>{{ r.rank ?? '―' }}</dd>
-                        <dt>稼働率</dt><dd>{{ r.utilization * 100 }}%</dd>
+                        <dt>稼働率</dt><dd>{{ Math.round(r.utilization * 100) }}%</dd>
                         <dt>単価</dt><dd>{{ r.unit_price !== null ? r.unit_price.toLocaleString() + ' 円' : '―' }}</dd>
                       </dl>
                     </div>

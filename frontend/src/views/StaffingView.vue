@@ -2,7 +2,7 @@
 import { extractError } from '@/api/client'
 import { ref, onMounted } from 'vue'
 import { getStaffingMatrix } from '@/api/staffing'
-import type { StaffingMatrix } from '@/types/staffing'
+import type { StaffingMatrix, StaffingCell } from '@/types/staffing'
 
 function currentYearMonth(): string {
   const d = new Date()
@@ -24,6 +24,10 @@ const error = ref('')
 const loading = ref(false)
 
 async function load() {
+  if (fromMonth.value > toMonth.value) {
+    error.value = '表示開始月は表示終了月以前を指定してください'
+    return
+  }
   loading.value = true
   error.value = ''
   try {
@@ -33,6 +37,18 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+function cellClass(cell: StaffingCell | undefined): string {
+  if (!cell || cell.status === '空き') return 'cell-empty'
+  if (cell.count > 1) return 'cell-multi'
+  return 'cell-busy'
+}
+
+function cellLabel(cell: StaffingCell | undefined): string {
+  if (!cell || cell.status === '空き') return ''
+  if (cell.count > 1) return `×${cell.count}`
+  return '■'
 }
 
 onMounted(load)
@@ -71,10 +87,10 @@ onMounted(load)
             <td
               v-for="m in matrix.months"
               :key="m"
-              :class="row.cells[m]?.status === '空き' ? 'cell-empty' : 'cell-busy'"
+              :class="cellClass(row.cells[m])"
               :title="row.cells[m]?.project_name ?? ''"
             >
-              {{ row.cells[m]?.status === '空き' ? '' : '■' }}
+              {{ cellLabel(row.cells[m]) }}
             </td>
           </tr>
         </tbody>
@@ -132,6 +148,11 @@ th, td {
 }
 .cell-empty {
   background: #fee2e2;
+}
+.cell-multi {
+  background: #fef9c3;
+  color: #713f12;
+  font-weight: bold;
 }
 .error {
   color: #dc2626;
