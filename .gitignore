@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# SQLite
+*.db
+*.sqlite3
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# Node
+node_modules/
+dist/
+
+# Misc
+.DS_Store
+*.env
