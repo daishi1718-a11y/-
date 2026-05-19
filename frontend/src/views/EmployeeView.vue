@@ -87,93 +87,119 @@ async function remove() {
   }
 }
 
+function statusBadgeClass(status: string): string {
+  if (status === '在籍') return 'badge badge-active'
+  if (status === '入社見込み') return 'badge badge-info'
+  return 'badge badge-done'
+}
+
 onMounted(load)
 </script>
 
 <template>
   <div class="page">
-    <h2>社員管理</h2>
-    <p v-if="error" class="error">{{ error }}</p>
-
-    <table>
-      <thead>
-        <tr>
-          <th>社員番号</th><th>氏名</th><th>クラス</th><th>在籍状況</th><th>入社日</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="emp in employees"
-          :key="emp.id"
-          :class="{ selected: editingId === emp.id }"
-          class="clickable"
-          @click="selectRow(emp)"
-        >
-          <td>{{ emp.employee_code }}</td>
-          <td>{{ emp.name }}</td>
-          <td>{{ emp.position }}</td>
-          <td>{{ emp.status }}</td>
-          <td>{{ emp.joined_at ?? '' }}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="form-section">
-      <h3>{{ editingId !== null ? '編集' : '新規登録' }}</h3>
-      <div class="form-grid">
-        <label>社員番号 <span class="req">*</span>
-          <input v-model="form.employee_code" />
-        </label>
-        <label>氏名 <span class="req">*</span>
-          <input v-model="form.name" />
-        </label>
-        <label>クラス <span class="req">*</span>
-          <select v-model="form.position">
-            <option value="">-- 選択 --</option>
-            <option v-for="p in POSITIONS" :key="p" :value="p">{{ p }}</option>
-          </select>
-        </label>
-        <label>在籍状況 <span class="req">*</span>
-          <select v-model="form.status">
-            <option value="">-- 選択 --</option>
-            <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
-          </select>
-        </label>
-        <label>入社日
-          <input type="date" v-model="form.joined_at" />
-        </label>
-        <label>退職日
-          <input type="date" v-model="form.left_at" />
-        </label>
+    <div class="page-header">
+      <div>
+        <div class="page-title">
+          社員管理
+          <span class="count-badge">{{ employees.length }}</span>
+        </div>
+        <div class="page-desc">社員マスタの登録・編集</div>
       </div>
-      <div class="actions">
-        <button @click="submit">{{ editingId !== null ? '更新' : '登録' }}</button>
-        <button v-if="editingId !== null" class="danger" @click="remove">削除</button>
-        <button v-if="editingId !== null" @click="resetForm">キャンセル</button>
+      <button class="btn btn-primary" @click="resetForm">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+        社員を追加
+      </button>
+    </div>
+
+    <div v-if="error" class="error-banner">
+      <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px;flex-shrink:0;margin-top:1px"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+      {{ error }}
+    </div>
+
+    <div class="card" style="overflow:hidden;margin-bottom:20px">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>社員番号</th>
+            <th>氏名</th>
+            <th>クラス</th>
+            <th>在籍状況</th>
+            <th>入社日</th>
+            <th>退職日</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="emp in employees"
+            :key="emp.id"
+            class="row-clickable"
+            :class="{ 'row-selected': editingId === emp.id }"
+            @click="selectRow(emp)"
+          >
+            <td class="text-mono">{{ emp.employee_code }}</td>
+            <td style="font-weight:500">{{ emp.name }}</td>
+            <td>{{ emp.position }}</td>
+            <td><span :class="statusBadgeClass(emp.status)">{{ emp.status }}</span></td>
+            <td class="nowrap">{{ emp.joined_at ?? '' }}</td>
+            <td class="nowrap">{{ emp.left_at ?? '' }}</td>
+          </tr>
+          <tr v-if="employees.length === 0">
+            <td colspan="6" class="empty-state">社員が登録されていません</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">{{ editingId !== null ? '社員を編集' : '新規登録' }}</span>
+        <button v-if="editingId !== null" class="btn btn-ghost btn-sm" @click="resetForm">キャンセル</button>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>社員番号<span class="req">*</span></label>
+            <input v-model="form.employee_code" placeholder="EMP001" />
+          </div>
+          <div class="field">
+            <label>氏名<span class="req">*</span></label>
+            <input v-model="form.name" placeholder="山田 太郎" />
+          </div>
+          <div class="field">
+            <label>クラス<span class="req">*</span></label>
+            <select v-model="form.position">
+              <option value="">-- 選択 --</option>
+              <option v-for="p in POSITIONS" :key="p" :value="p">{{ p }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>在籍状況<span class="req">*</span></label>
+            <select v-model="form.status">
+              <option value="">-- 選択 --</option>
+              <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>入社日</label>
+            <input type="date" v-model="form.joined_at" />
+          </div>
+          <div class="field">
+            <label>退職日</label>
+            <input type="date" v-model="form.left_at" />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" @click="submit">
+            {{ editingId !== null ? '更新する' : '登録する' }}
+          </button>
+          <button v-if="editingId !== null" class="btn btn-danger" @click="remove">削除</button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 1.5rem; }
-h2 { margin-bottom: 1rem; }
-table { border-collapse: collapse; width: 100%; margin-bottom: 1.5rem; font-size: 0.9rem; }
-th, td { border: 1px solid #cbd5e1; padding: 0.4rem 0.6rem; text-align: left; }
-th { background: #f1f5f9; }
-.clickable { cursor: pointer; }
-.clickable:hover { background: #f8fafc; }
-.selected { background: #dbeafe !important; }
-.form-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; }
-h3 { margin-bottom: 0.75rem; font-size: 1rem; }
-.form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
-label { display: flex; flex-direction: column; font-size: 0.85rem; gap: 0.25rem; }
-input, select { padding: 0.35rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9rem; }
-.req { color: #dc2626; }
-.actions { display: flex; gap: 0.5rem; }
-button { padding: 0.4rem 1rem; cursor: pointer; border: 1px solid #94a3b8; background: #fff; border-radius: 4px; }
-button:hover { background: #f1f5f9; }
-.danger { color: #dc2626; border-color: #dc2626; }
-.danger:hover { background: #fee2e2; }
-.error { color: #dc2626; margin-bottom: 0.75rem; }
+.nowrap { white-space: nowrap; }
 </style>

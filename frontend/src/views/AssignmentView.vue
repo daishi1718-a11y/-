@@ -138,10 +138,10 @@ async function remove() {
   }
 }
 
-function statusClass(status: string): string {
-  if (status === '契約期間中') return 'badge-active'
-  if (status === '内諾') return 'badge-pending'
-  return 'badge-done'
+function statusBadgeClass(status: string): string {
+  if (status === '契約期間中') return 'badge badge-active'
+  if (status === '内諾') return 'badge badge-pending'
+  return 'badge badge-done'
 }
 
 onMounted(load)
@@ -149,126 +149,182 @@ onMounted(load)
 
 <template>
   <div class="page">
-    <h2>アサイン管理</h2>
-    <p v-if="error" class="error">{{ error }}</p>
-
-    <div class="filter">
-      <label>
-        ステータス絞り込み
-        <select v-model="statusFilter">
-          <option value="">すべて</option>
-          <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
-        </select>
-      </label>
+    <div class="page-header">
+      <div>
+        <div class="page-title">
+          アサイン管理
+          <span class="count-badge">{{ filteredAssignments.length }}</span>
+        </div>
+        <div class="page-desc">社員と案件のアサイン登録・管理</div>
+      </div>
+      <button class="btn btn-primary" @click="resetForm">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+        アサインを追加
+      </button>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>社員名</th><th>案件名</th><th>ランク</th><th>稼働率</th>
-          <th>開始日</th><th>終了日</th><th>ステータス</th><th>単価</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="a in filteredAssignments"
-          :key="a.id"
-          :class="{ selected: editingId === a.id }"
-          class="clickable"
-          @click="selectRow(a)"
-        >
-          <td>{{ a.employee_name }}</td>
-          <td>{{ a.project_name }}</td>
-          <td>{{ a.rank ?? '' }}</td>
-          <td>{{ Math.round(a.utilization * 100) }}%</td>
-          <td>{{ a.start_date }}</td>
-          <td>{{ a.end_date }}</td>
-          <td><span :class="statusClass(a.status)">{{ a.status }}</span></td>
-          <td>{{ a.unit_price !== null ? a.unit_price.toLocaleString() : '' }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div v-if="error" class="error-banner">
+      <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px;flex-shrink:0;margin-top:1px"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+      {{ error }}
+    </div>
 
-    <div class="form-section">
-      <h3>{{ editingId !== null ? '編集' : '新規登録' }}</h3>
-      <div class="form-grid">
-        <label>社員 <span class="req">*</span>
-          <select v-model="form.employee_id">
-            <option value="">-- 選択 --</option>
-            <option v-for="e in employees" :key="e.id" :value="String(e.id)">{{ e.name }}</option>
-          </select>
-        </label>
-        <label>案件 <span class="req">*</span>
-          <select v-model="form.project_id">
-            <option value="">-- 選択 --</option>
-            <option v-for="p in projects" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
-          </select>
-        </label>
-        <label>枝番
-          <input type="number" v-model="form.branch_no" min="1" />
-        </label>
-        <label>ランク
-          <select v-model="form.rank">
-            <option value="">-- 選択 --</option>
-            <option v-for="r in RANKS" :key="r" :value="r">{{ r }}</option>
-          </select>
-        </label>
-        <label>稼働率 <span class="req">*</span>
-          <input type="number" v-model="form.utilization" min="0.05" max="1.0" step="0.05" />
-        </label>
-        <label>ステータス <span class="req">*</span>
-          <select v-model="form.status">
-            <option value="">-- 選択 --</option>
-            <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
-          </select>
-        </label>
-        <label>契約開始日 <span class="req">*</span>
-          <input type="date" v-model="form.start_date" />
-        </label>
-        <label>契約終了日 <span class="req">*</span>
-          <input type="date" v-model="form.end_date" />
-        </label>
-        <label>単価
-          <input type="number" v-model="form.unit_price" />
-        </label>
-        <label class="span3">メモ
-          <input v-model="form.note" />
-        </label>
+    <div class="filter-bar">
+      <span class="filter-label">ステータス</span>
+      <button
+        class="filter-btn"
+        :class="{ active: statusFilter === '' }"
+        @click="statusFilter = ''"
+      >すべて</button>
+      <button
+        v-for="s in STATUSES"
+        :key="s"
+        class="filter-btn"
+        :class="{ active: statusFilter === s }"
+        @click="statusFilter = s"
+      >{{ s }}</button>
+    </div>
+
+    <div class="card" style="overflow:hidden;margin-bottom:20px">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>社員名</th>
+            <th>案件名</th>
+            <th>ランク</th>
+            <th>稼働率</th>
+            <th>開始日</th>
+            <th>終了日</th>
+            <th>ステータス</th>
+            <th>単価</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="a in filteredAssignments"
+            :key="a.id"
+            class="row-clickable"
+            :class="{ 'row-selected': editingId === a.id }"
+            @click="selectRow(a)"
+          >
+            <td style="font-weight:500">{{ a.employee_name }}</td>
+            <td>{{ a.project_name }}</td>
+            <td>{{ a.rank ?? '' }}</td>
+            <td>{{ Math.round(a.utilization * 100) }}%</td>
+            <td class="nowrap">{{ a.start_date }}</td>
+            <td class="nowrap">{{ a.end_date }}</td>
+            <td><span :class="statusBadgeClass(a.status)">{{ a.status }}</span></td>
+            <td class="text-right">{{ a.unit_price !== null ? a.unit_price.toLocaleString() : '' }}</td>
+          </tr>
+          <tr v-if="filteredAssignments.length === 0">
+            <td colspan="8" class="empty-state">アサインが登録されていません</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">{{ editingId !== null ? 'アサインを編集' : '新規登録' }}</span>
+        <button v-if="editingId !== null" class="btn btn-ghost btn-sm" @click="resetForm">キャンセル</button>
       </div>
-      <div class="actions">
-        <button @click="submit">{{ editingId !== null ? '更新' : '登録' }}</button>
-        <button v-if="editingId !== null" class="danger" @click="remove">削除</button>
-        <button v-if="editingId !== null" @click="resetForm">キャンセル</button>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>社員<span class="req">*</span></label>
+            <select v-model="form.employee_id">
+              <option value="">-- 選択 --</option>
+              <option v-for="e in employees" :key="e.id" :value="String(e.id)">{{ e.name }}</option>
+            </select>
+          </div>
+          <div class="field span2">
+            <label>案件<span class="req">*</span></label>
+            <select v-model="form.project_id">
+              <option value="">-- 選択 --</option>
+              <option v-for="p in projects" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>枝番</label>
+            <input type="number" v-model="form.branch_no" min="1" placeholder="1" />
+          </div>
+          <div class="field">
+            <label>ランク</label>
+            <select v-model="form.rank">
+              <option value="">-- 選択 --</option>
+              <option v-for="r in RANKS" :key="r" :value="r">{{ r }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>稼働率<span class="req">*</span></label>
+            <input type="number" v-model="form.utilization" min="0.05" max="1.0" step="0.05" placeholder="1.0" />
+          </div>
+          <div class="field">
+            <label>ステータス<span class="req">*</span></label>
+            <select v-model="form.status">
+              <option value="">-- 選択 --</option>
+              <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>契約開始日<span class="req">*</span></label>
+            <input type="date" v-model="form.start_date" />
+          </div>
+          <div class="field">
+            <label>契約終了日<span class="req">*</span></label>
+            <input type="date" v-model="form.end_date" />
+          </div>
+          <div class="field">
+            <label>単価</label>
+            <input type="number" v-model="form.unit_price" placeholder="0" />
+          </div>
+          <div class="field span3">
+            <label>メモ</label>
+            <input v-model="form.note" placeholder="メモ・備考など" />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" @click="submit">
+            {{ editingId !== null ? '更新する' : '登録する' }}
+          </button>
+          <button v-if="editingId !== null" class="btn btn-danger" @click="remove">削除</button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 1.5rem; }
-h2 { margin-bottom: 1rem; }
-.filter { margin-bottom: 1rem; }
-.filter label { display: flex; flex-direction: column; font-size: 0.85rem; gap: 0.25rem; width: 12rem; }
-table { border-collapse: collapse; width: 100%; margin-bottom: 1.5rem; font-size: 0.9rem; }
-th, td { border: 1px solid #cbd5e1; padding: 0.4rem 0.6rem; text-align: left; }
-th { background: #f1f5f9; }
-.clickable { cursor: pointer; }
-.clickable:hover { background: #f8fafc; }
-.selected { background: #dbeafe !important; }
-.form-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; }
-h3 { margin-bottom: 0.75rem; font-size: 1rem; }
-.form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
-.span3 { grid-column: 1 / -1; }
-label { display: flex; flex-direction: column; font-size: 0.85rem; gap: 0.25rem; }
-input, select { padding: 0.35rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9rem; }
-.req { color: #dc2626; }
-.actions { display: flex; gap: 0.5rem; }
-button { padding: 0.4rem 1rem; cursor: pointer; border: 1px solid #94a3b8; background: #fff; border-radius: 4px; }
-button:hover { background: #f1f5f9; }
-.danger { color: #dc2626; border-color: #dc2626; }
-.danger:hover { background: #fee2e2; }
-.error { color: #dc2626; margin-bottom: 0.75rem; }
-.badge-active { background: #dcfce7; color: #166534; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.8rem; }
-.badge-pending { background: #fef9c3; color: #713f12; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.8rem; }
-.badge-done { background: #f1f5f9; color: #475569; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.8rem; }
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  margin-right: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.filter-btn {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  font-family: inherit;
+}
+.filter-btn:hover { background: var(--surface-sub); }
+.filter-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.nowrap { white-space: nowrap; }
 </style>

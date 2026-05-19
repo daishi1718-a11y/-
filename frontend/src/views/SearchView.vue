@@ -74,10 +74,10 @@ function commercialFlow(r: SearchResult): string {
     .join(' → ')
 }
 
-function statusClass(status: string): string {
-  if (status === '契約期間中') return 'badge-active'
-  if (status === '内諾') return 'badge-pending'
-  return 'badge-done'
+function statusBadgeClass(status: string): string {
+  if (status === '契約期間中') return 'badge badge-active'
+  if (status === '内諾') return 'badge badge-pending'
+  return 'badge badge-done'
 }
 
 onMounted(load)
@@ -85,187 +85,235 @@ onMounted(load)
 
 <template>
   <div class="page">
-    <h2>ナレッジ検索</h2>
-    <p class="desc">誰がどの案件に入っていたか・スキル・商流を横断検索できます</p>
-
-    <div class="search-box">
-      <div class="search-row">
-        <label class="wide">
-          フリーワード
-          <input
-            v-model="params.q"
-            placeholder="社員名・案件名・スキル・メモ など"
-            @keyup.enter="doSearch"
-          />
-        </label>
-        <label>
-          社員
-          <select v-model="params.employee_id">
-            <option value="">すべて</option>
-            <option v-for="e in employees" :key="e.id" :value="String(e.id)">{{ e.name }}</option>
-          </select>
-        </label>
-        <label>
-          顧客
-          <select v-model="params.client_id">
-            <option value="">すべて</option>
-            <option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
-          </select>
-        </label>
-        <label>
-          ステータス
-          <select v-model="params.assignment_status">
-            <option value="">すべて</option>
-            <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
-          </select>
-        </label>
-      </div>
-      <div class="search-actions">
-        <button class="primary" @click="doSearch" :disabled="loading">
-          {{ loading ? '検索中...' : '検索' }}
-        </button>
-        <button @click="resetParams">クリア</button>
+    <div class="page-header">
+      <div>
+        <div class="page-title">ナレッジ検索</div>
+        <div class="page-desc">誰がどの案件に入っていたか・スキル・商流を横断検索</div>
       </div>
     </div>
 
-    <p v-if="error" class="error">{{ error }}</p>
+    <div v-if="error" class="error-banner">
+      <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px;flex-shrink:0;margin-top:1px"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+      {{ error }}
+    </div>
 
-    <div v-if="searched" class="results">
-      <div class="result-header">
-        検索結果：<strong>{{ results.length }} 件</strong>
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-body">
+        <div class="search-freeword">
+          <div class="field">
+            <label>フリーワード</label>
+            <div class="search-input-wrap">
+              <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
+              <input
+                v-model="params.q"
+                placeholder="社員名・案件名・スキル・メモなど"
+                @keyup.enter="doSearch"
+                class="search-input"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="search-filters">
+          <div class="field">
+            <label>社員</label>
+            <select v-model="params.employee_id">
+              <option value="">すべて</option>
+              <option v-for="e in employees" :key="e.id" :value="String(e.id)">{{ e.name }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>顧客</label>
+            <select v-model="params.client_id">
+              <option value="">すべて</option>
+              <option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>ステータス</label>
+            <select v-model="params.assignment_status">
+              <option value="">すべて</option>
+              <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
+            </select>
+          </div>
+          <div class="search-actions">
+            <button class="btn btn-primary" @click="doSearch" :disabled="loading">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
+              {{ loading ? '検索中...' : '検索' }}
+            </button>
+            <button class="btn btn-secondary" @click="resetParams">クリア</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="searched">
+      <div class="results-header">
+        検索結果
+        <span class="count-badge">{{ results.length }} 件</span>
       </div>
 
-      <p v-if="results.length === 0" class="no-results">条件に一致するデータがありません</p>
+      <div v-if="results.length === 0" class="card">
+        <div class="empty-state">条件に一致するデータがありません</div>
+      </div>
 
-      <table v-else>
-        <thead>
-          <tr>
-            <th></th>
-            <th>社員名</th>
-            <th>クラス</th>
-            <th>案件名</th>
-            <th>エンド顧客</th>
-            <th>役割</th>
-            <th>期間</th>
-            <th>ステータス</th>
-          </tr>
-        </thead>
-        <tbody>
-          <template v-for="r in results" :key="r.assignment_id">
-            <tr class="clickable" @click="toggleExpand(r.assignment_id)">
-              <td class="expand-icon">{{ expandedId === r.assignment_id ? '▼' : '▶' }}</td>
-              <td><strong>{{ r.employee_name }}</strong></td>
-              <td>{{ r.employee_position }}</td>
-              <td>{{ r.project_name }}</td>
-              <td>{{ r.end_client_name ?? '―' }}</td>
-              <td>{{ r.role ?? '―' }}</td>
-              <td class="nowrap">{{ r.start_date }} 〜 {{ r.end_date }}</td>
-              <td><span :class="statusClass(r.assignment_status)">{{ r.assignment_status }}</span></td>
+      <div v-else class="card" style="overflow:hidden">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:32px"></th>
+              <th>社員名</th>
+              <th>クラス</th>
+              <th>案件名</th>
+              <th>エンド顧客</th>
+              <th>役割</th>
+              <th>期間</th>
+              <th>ステータス</th>
             </tr>
-            <tr v-if="expandedId === r.assignment_id" class="detail-row">
-              <td colspan="8">
-                <div class="detail">
-                  <div class="detail-grid">
-                    <div class="detail-section">
-                      <h4>社員情報</h4>
-                      <dl>
-                        <dt>在籍状況</dt><dd>{{ r.employee_status }}</dd>
-                        <dt>アサイン時ランク</dt><dd>{{ r.rank ?? '―' }}</dd>
-                        <dt>稼働率</dt><dd>{{ Math.round(r.utilization * 100) }}%</dd>
-                        <dt>単価</dt><dd>{{ r.unit_price !== null ? r.unit_price.toLocaleString() + ' 円' : '―' }}</dd>
-                      </dl>
-                    </div>
-                    <div class="detail-section">
-                      <h4>案件情報</h4>
-                      <dl>
-                        <dt>案件コード</dt><dd>{{ r.project_code }}</dd>
-                        <dt>概要</dt><dd>{{ r.description ?? '―' }}</dd>
-                        <dt>必要スキル</dt><dd>{{ r.required_skill ?? '―' }}</dd>
-                        <dt>歓迎スキル</dt><dd>{{ r.preferred_skill ?? '―' }}</dd>
-                        <dt>想定工程</dt><dd>{{ r.process_flags ?? '―' }}</dd>
-                      </dl>
-                    </div>
-                    <div class="detail-section">
-                      <h4>商流</h4>
-                      <div class="flow">{{ commercialFlow(r) || '―' }}</div>
-                      <dl>
-                        <dt>エンド</dt><dd>{{ r.end_client_name ?? '―' }}</dd>
-                        <dt>プライム</dt><dd>{{ r.prime_client_name ?? '―' }}</dd>
-                        <dt>中間1</dt><dd>{{ r.mid1_client_name ?? '―' }}</dd>
-                        <dt>中間2</dt><dd>{{ r.mid2_client_name ?? '―' }}</dd>
-                        <dt>契約</dt><dd>{{ r.contract_client_name ?? '―' }}</dd>
-                      </dl>
-                    </div>
-                    <div v-if="r.note" class="detail-section span2">
-                      <h4>メモ</h4>
-                      <p>{{ r.note }}</p>
+          </thead>
+          <tbody>
+            <template v-for="r in results" :key="r.assignment_id">
+              <tr class="row-clickable" @click="toggleExpand(r.assignment_id)">
+                <td style="text-align:center;color:var(--text-3)">
+                  <svg v-if="expandedId === r.assignment_id" viewBox="0 0 20 20" fill="currentColor" style="width:12px;height:12px"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                  <svg v-else viewBox="0 0 20 20" fill="currentColor" style="width:12px;height:12px"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+                </td>
+                <td style="font-weight:600">{{ r.employee_name }}</td>
+                <td>{{ r.employee_position }}</td>
+                <td>{{ r.project_name }}</td>
+                <td>{{ r.end_client_name ?? '―' }}</td>
+                <td>{{ r.role ?? '―' }}</td>
+                <td class="nowrap">{{ r.start_date }} 〜 {{ r.end_date }}</td>
+                <td><span :class="statusBadgeClass(r.assignment_status)">{{ r.assignment_status }}</span></td>
+              </tr>
+              <tr v-if="expandedId === r.assignment_id" class="row-detail">
+                <td colspan="8">
+                  <div class="detail-panel">
+                    <div class="detail-grid">
+                      <div class="detail-section">
+                        <div class="detail-section-title">社員情報</div>
+                        <dl class="detail-dl">
+                          <dt>在籍状況</dt><dd>{{ r.employee_status }}</dd>
+                          <dt>アサイン時ランク</dt><dd>{{ r.rank ?? '―' }}</dd>
+                          <dt>稼働率</dt><dd>{{ Math.round(r.utilization * 100) }}%</dd>
+                          <dt>単価</dt><dd>{{ r.unit_price !== null ? r.unit_price.toLocaleString() + ' 円' : '―' }}</dd>
+                        </dl>
+                      </div>
+                      <div class="detail-section">
+                        <div class="detail-section-title">案件情報</div>
+                        <dl class="detail-dl">
+                          <dt>案件コード</dt><dd>{{ r.project_code }}</dd>
+                          <dt>概要</dt><dd>{{ r.description ?? '―' }}</dd>
+                          <dt>必要スキル</dt><dd>{{ r.required_skill ?? '―' }}</dd>
+                          <dt>歓迎スキル</dt><dd>{{ r.preferred_skill ?? '―' }}</dd>
+                          <dt>想定工程</dt><dd>{{ r.process_flags ?? '―' }}</dd>
+                        </dl>
+                      </div>
+                      <div class="detail-section">
+                        <div class="detail-section-title">商流</div>
+                        <div class="flow-line">{{ commercialFlow(r) || '―' }}</div>
+                        <dl class="detail-dl">
+                          <dt>エンド</dt><dd>{{ r.end_client_name ?? '―' }}</dd>
+                          <dt>プライム</dt><dd>{{ r.prime_client_name ?? '―' }}</dd>
+                          <dt>中間1</dt><dd>{{ r.mid1_client_name ?? '―' }}</dd>
+                          <dt>中間2</dt><dd>{{ r.mid2_client_name ?? '―' }}</dd>
+                          <dt>契約</dt><dd>{{ r.contract_client_name ?? '―' }}</dd>
+                        </dl>
+                      </div>
+                      <div v-if="r.note" class="detail-section span2">
+                        <div class="detail-section-title">メモ</div>
+                        <p style="font-size:13px;color:var(--text)">{{ r.note }}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 1.5rem; }
-h2 { margin-bottom: 0.25rem; }
-.desc { color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem; }
-
-.search-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
+.search-freeword {
+  margin-bottom: 12px;
 }
-.search-row {
+.search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search-icon {
+  position: absolute;
+  left: 10px;
+  width: 15px;
+  height: 15px;
+  color: var(--text-3);
+  pointer-events: none;
+}
+.search-input {
+  padding: 8px 10px 8px 34px !important;
+}
+.search-filters {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
 }
-.wide { grid-column: 1; }
-label { display: flex; flex-direction: column; font-size: 0.85rem; gap: 0.25rem; }
-input, select { padding: 0.35rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9rem; }
-.search-actions { display: flex; gap: 0.5rem; }
-button { padding: 0.4rem 1.25rem; cursor: pointer; border: 1px solid #94a3b8; background: #fff; border-radius: 4px; font-size: 0.9rem; }
-button:hover { background: #f1f5f9; }
-button.primary { background: #1e293b; color: #f8fafc; border-color: #1e293b; }
-button.primary:hover { background: #334155; }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.search-actions {
+  display: flex;
+  gap: 8px;
+}
 
-.result-header { margin-bottom: 0.75rem; font-size: 0.9rem; color: #475569; }
+.results-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 12px;
+}
 
-table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
-th, td { border: 1px solid #cbd5e1; padding: 0.4rem 0.6rem; text-align: left; }
-th { background: #f1f5f9; white-space: nowrap; }
-.clickable { cursor: pointer; }
-.clickable:hover { background: #f8fafc; }
-.expand-icon { text-align: center; color: #94a3b8; font-size: 0.75rem; width: 1.5rem; }
 .nowrap { white-space: nowrap; }
 
-.detail-row td { padding: 0; background: #f8fafc; }
-.detail { padding: 1rem; }
+.detail-panel {
+  padding: 20px;
+  background: #f8fafc;
+}
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+  gap: 16px;
 }
-.span2 { grid-column: span 2; }
-.detail-section h4 { font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem; }
-dl { display: grid; grid-template-columns: 6rem 1fr; gap: 0.2rem 0.5rem; font-size: 0.85rem; }
-dt { color: #64748b; }
-dd { color: #1e293b; }
-.flow { font-size: 0.85rem; color: #0f172a; margin-bottom: 0.5rem; font-weight: 500; }
+.detail-section {}
+.detail-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-dl {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 3px 8px;
+  font-size: 12px;
+}
+.detail-dl dt { color: var(--text-3); }
+.detail-dl dd { color: var(--text); }
 
-.badge-active { background: #dcfce7; color: #166534; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.8rem; }
-.badge-pending { background: #fef9c3; color: #713f12; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.8rem; }
-.badge-done { background: #f1f5f9; color: #475569; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.8rem; }
-.no-results { color: #94a3b8; padding: 1rem 0; }
-.error { color: #dc2626; margin-bottom: 0.75rem; }
+.flow-line {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 500;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.span2 { grid-column: span 2; }
 </style>

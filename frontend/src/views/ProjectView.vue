@@ -132,128 +132,152 @@ onMounted(load)
 
 <template>
   <div class="page">
-    <h2>案件管理</h2>
-    <p v-if="error" class="error">{{ error }}</p>
+    <div class="page-header">
+      <div>
+        <div class="page-title">
+          案件管理
+          <span class="count-badge">{{ projects.length }}</span>
+        </div>
+        <div class="page-desc">案件マスタの登録・編集</div>
+      </div>
+      <button class="btn btn-primary" @click="resetForm">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+        案件を追加
+      </button>
+    </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>案件コード</th><th>案件名</th><th>役割</th><th>エンド顧客</th><th>契約企業</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="p in projects"
-          :key="p.id"
-          :class="{ selected: editingId === p.id }"
-          class="clickable"
-          @click="selectRow(p)"
-        >
-          <td>{{ p.project_code }}</td>
-          <td>{{ p.name }}</td>
-          <td>{{ p.role ?? '' }}</td>
-          <td>{{ clientName(p.end_client_id) }}</td>
-          <td>{{ clientName(p.contract_client_id) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div v-if="error" class="error-banner">
+      <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px;flex-shrink:0;margin-top:1px"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+      {{ error }}
+    </div>
 
-    <div class="form-section">
-      <h3>{{ editingId !== null ? '編集' : '新規登録' }}</h3>
-      <div class="form-grid">
-        <label>案件コード <span class="req">*</span>
-          <input v-model="form.project_code" />
-        </label>
-        <label>案件名 <span class="req">*</span>
-          <input v-model="form.name" />
-        </label>
-        <label>役割
-          <select v-model="form.role">
-            <option value="">-- 選択 --</option>
-            <option v-for="r in ROLES" :key="r" :value="r">{{ r }}</option>
-          </select>
-        </label>
-        <label class="span2">概要
-          <input v-model="form.description" />
-        </label>
-        <label>必要スキル
-          <input v-model="form.required_skill" />
-        </label>
-        <label>歓迎スキル
-          <input v-model="form.preferred_skill" />
-        </label>
-        <label>エンド顧客
-          <select v-model="form.end_client_id">
-            <option value="">-- 選択 --</option>
-            <option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
-          </select>
-        </label>
-        <label>プライム
-          <select v-model="form.prime_client_id">
-            <option value="">-- 選択 --</option>
-            <option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
-          </select>
-        </label>
-        <label>中間1
-          <select v-model="form.mid1_client_id">
-            <option value="">-- 選択 --</option>
-            <option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
-          </select>
-        </label>
-        <label>中間2
-          <select v-model="form.mid2_client_id">
-            <option value="">-- 選択 --</option>
-            <option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
-          </select>
-        </label>
-        <label>契約企業
-          <select v-model="form.contract_client_id">
-            <option value="">-- 選択 --</option>
-            <option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
-          </select>
-        </label>
-        <div class="process-wrap">
-          <span class="label-text">想定工程</span>
-          <div class="checkboxes">
-            <label v-for="proc in PROCESSES" :key="proc" class="inline">
-              <input type="checkbox" :value="proc" v-model="form.process_flags" /> {{ proc }}
-            </label>
+    <div class="card" style="overflow:hidden;margin-bottom:20px">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>案件コード</th>
+            <th>案件名</th>
+            <th>役割</th>
+            <th>エンド顧客</th>
+            <th>契約企業</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="p in projects"
+            :key="p.id"
+            class="row-clickable"
+            :class="{ 'row-selected': editingId === p.id }"
+            @click="selectRow(p)"
+          >
+            <td class="text-mono">{{ p.project_code }}</td>
+            <td style="font-weight:500">{{ p.name }}</td>
+            <td>{{ p.role ?? '' }}</td>
+            <td>{{ clientName(p.end_client_id) }}</td>
+            <td>{{ clientName(p.contract_client_id) }}</td>
+          </tr>
+          <tr v-if="projects.length === 0">
+            <td colspan="5" class="empty-state">案件が登録されていません</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">{{ editingId !== null ? '案件を編集' : '新規登録' }}</span>
+        <button v-if="editingId !== null" class="btn btn-ghost btn-sm" @click="resetForm">キャンセル</button>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>案件コード<span class="req">*</span></label>
+            <input v-model="form.project_code" placeholder="PRJ001" />
+          </div>
+          <div class="field span2">
+            <label>案件名<span class="req">*</span></label>
+            <input v-model="form.name" placeholder="〇〇システム開発支援" />
+          </div>
+          <div class="field">
+            <label>役割</label>
+            <select v-model="form.role">
+              <option value="">-- 選択 --</option>
+              <option v-for="r in ROLES" :key="r" :value="r">{{ r }}</option>
+            </select>
+          </div>
+          <div class="field span2">
+            <label>概要</label>
+            <input v-model="form.description" placeholder="案件の概要" />
+          </div>
+          <div class="field">
+            <label>必要スキル</label>
+            <input v-model="form.required_skill" placeholder="Java, AWS など" />
+          </div>
+          <div class="field">
+            <label>歓迎スキル</label>
+            <input v-model="form.preferred_skill" placeholder="Python など" />
+          </div>
+          <div class="field">
+            <label>エンド顧客</label>
+            <select v-model="form.end_client_id">
+              <option value="">-- 選択 --</option>
+              <option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>プライム</label>
+            <select v-model="form.prime_client_id">
+              <option value="">-- 選択 --</option>
+              <option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>中間1</label>
+            <select v-model="form.mid1_client_id">
+              <option value="">-- 選択 --</option>
+              <option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>中間2</label>
+            <select v-model="form.mid2_client_id">
+              <option value="">-- 選択 --</option>
+              <option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>契約企業</label>
+            <select v-model="form.contract_client_id">
+              <option value="">-- 選択 --</option>
+              <option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
+            </select>
+          </div>
+          <div class="field span3">
+            <label>想定工程</label>
+            <div class="checkbox-group">
+              <label v-for="proc in PROCESSES" :key="proc" class="inline-label">
+                <input type="checkbox" :value="proc" v-model="form.process_flags" />
+                {{ proc }}
+              </label>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="actions">
-        <button @click="submit">{{ editingId !== null ? '更新' : '登録' }}</button>
-        <button v-if="editingId !== null" class="danger" @click="remove">削除</button>
-        <button v-if="editingId !== null" @click="resetForm">キャンセル</button>
+        <div class="form-actions">
+          <button class="btn btn-primary" @click="submit">
+            {{ editingId !== null ? '更新する' : '登録する' }}
+          </button>
+          <button v-if="editingId !== null" class="btn btn-danger" @click="remove">削除</button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 1.5rem; }
-h2 { margin-bottom: 1rem; }
-table { border-collapse: collapse; width: 100%; margin-bottom: 1.5rem; font-size: 0.9rem; }
-th, td { border: 1px solid #cbd5e1; padding: 0.4rem 0.6rem; text-align: left; }
-th { background: #f1f5f9; }
-.clickable { cursor: pointer; }
-.clickable:hover { background: #f8fafc; }
-.selected { background: #dbeafe !important; }
-.form-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; }
-h3 { margin-bottom: 0.75rem; font-size: 1rem; }
-.form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
-.span2 { grid-column: span 2; }
-label { display: flex; flex-direction: column; font-size: 0.85rem; gap: 0.25rem; }
-label.inline { flex-direction: row; align-items: center; gap: 0.3rem; font-size: 0.85rem; }
-input, select { padding: 0.35rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9rem; }
-.req { color: #dc2626; }
-.process-wrap { grid-column: 1 / -1; }
-.label-text { font-size: 0.85rem; display: block; margin-bottom: 0.25rem; }
-.checkboxes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.actions { display: flex; gap: 0.5rem; }
-button { padding: 0.4rem 1rem; cursor: pointer; border: 1px solid #94a3b8; background: #fff; border-radius: 4px; }
-button:hover { background: #f1f5f9; }
-.danger { color: #dc2626; border-color: #dc2626; }
-.danger:hover { background: #fee2e2; }
-.error { color: #dc2626; margin-bottom: 0.75rem; }
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 0 2px;
+}
 </style>
